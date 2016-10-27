@@ -10,6 +10,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.ActivityNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -42,6 +45,14 @@ import java.util.Random;
 public class GCMIntentService extends GcmListenerService implements PushConstants {
 
     private static final String LOG_TAG = "PushPlugin_GCMIntentService";
+
+    // TODO: translate to english        
+    // Unlock-App dient zum Aufwecken des Geraetes:
+    // muss auf dem Tablet installiert sein 
+
+    private static final String UNLOCK_PACKAGE_NAME = "io.appium.unlock";
+
+
     private static HashMap<Integer, ArrayList<String>> messageMap = new HashMap<Integer, ArrayList<String>>();
 
     public void setNotification(int notId, String message){
@@ -271,11 +282,27 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         return count;
     }
 
+    // start the Unlock-App
+    private void startUnlockApp() {
+        PackageManager packageManager = getPackageManager();
+        String packageName = UNLOCK_PACKAGE_NAME;
+        try {
+            Intent intent = packageManager.getLaunchIntentForPackage(packageName);
+            if(null != intent) {
+                startActivity(intent);
+            }
+        } catch (ActivityNotFoundException e) {
+            e.printStackTrace();
+        }        
+    }
+
+
     private void showNotificationIfPossible (Context context, Bundle extras) {
 
         // Send a notification if there is a message or title, otherwise just send data
         String message = extras.getString(MESSAGE);
         String title = extras.getString(TITLE);
+        String forceLaunch = extras.getString(FORCE_LAUNCH);
         String contentAvailable = extras.getString(CONTENT_AVAILABLE);
         int badgeCount = extractBadgeCount(extras);
         if (badgeCount >= 0) {
@@ -297,6 +324,10 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
             }
 
             createNotification(context, extras);
+        }
+        else if ("1".equals(forceLaunch)) { 
+            Log.d(LOG_TAG, "force launch event"); 
+            startUnlockApp();
         }
 
         if ("1".equals(contentAvailable)) {
